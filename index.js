@@ -1,8 +1,9 @@
 require('dotenv').config();
 const express = require('express');
+const cors = require('cors');
 const axios = require('axios');
-const { IamAuthenticator } = require('ibm-watson/auth');
 const AssistantV2 = require('ibm-watson/assistant/v2');
+const { IamAuthenticator } = require('ibm-watson/auth');
 
 // Configuração do Watson Assistant
 const assistant = new AssistantV2({
@@ -14,14 +15,18 @@ const assistant = new AssistantV2({
 });
 
 const app = express();
+app.use(cors()); 
 app.use(express.json());
 
 // Rota para interagir com o Watson e a API de Futebol
 app.post('/mensagem', async (req, res) => {
   const { message } = req.body;
-
+  console.log('mensagem:', message);
   try {
     // Envie a mensagem do usuário para o Watson Assistant
+    console.log('WATSON_ASSISTANT_ID:', process.env.WATSON_ASSISTANT_ID);
+    console.log('assistant', assistant);
+
     const response = await assistant.message({
       assistantId: process.env.WATSON_ASSISTANT_ID,
       sessionId: await getSessionId(),
@@ -30,7 +35,7 @@ app.post('/mensagem', async (req, res) => {
         'text': message,
       },
     });
-
+    console.log('recebeu do watson', response.result);
     const intent = response.result.output.intents[0]?.intent;
     let reply;
 
@@ -51,9 +56,18 @@ app.post('/mensagem', async (req, res) => {
 
 // Função para obter Session ID do Watson Assistant
 async function getSessionId() {
+  console.log('tentoou pegar sessao');
   const session = await assistant.createSession({
-    assistantId: process.env.WATSON_ASSISTANT_ID,
-  });
+    assistantId: process.env.WATSON_ASSISTANT_ID
+  })
+    .then(res => {
+      console.log('res:', res);
+      console.log(JSON.stringify(res.result, null, 2));
+    })
+    .catch(err => {
+      console.log(err);
+    });
+  console.log('sessao:', session.result.session_id);
   return session.result.session_id;
 }
 
